@@ -17,7 +17,8 @@
       /* dvh/dvw accounts for mobile browser chrome in both orientations */
       width: 100dvw; height: 100dvh;
       margin: 0; padding: 0;
-      background: #000; color: #fff;
+      background: #000;
+      color: #fff;
       font-family: system-ui, sans-serif;
       -webkit-user-select: none; user-select: none;
       overscroll-behavior: none;
@@ -29,24 +30,91 @@
     /* ── Menu ─────────────────────────────────────────────── */
     #menu {
       text-align: center;
-      padding: 10px 6px;
+      padding: 16px 10px 10px;
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      gap: 6px;
-      /* In portrait it stacks; in landscape it wraps into rows */
+      gap: 8px;
       max-height: 100dvh;
       overflow-y: auto;
     }
+
+    @media (orientation: landscape) {
+      #menu { flex-direction: row; flex-wrap: wrap; justify-content: center; padding: 8px; gap: 6px; }
+      .menu-btn { flex: 1 1 160px; max-width: 210px; padding: 10px 12px; font-size: 14px; }
+      #menu-title { font-size: clamp(18px, 3vw, 28px); margin-bottom: 2px; }
+      #menu-subtitle { display: none; }
+    }
+
+    #menu-title {
+      font-size: clamp(26px, 7vw, 42px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin: 0 0 2px;
+      background: linear-gradient(90deg, #ff6fd8, #ffbe00, #3bffae, #5eb3ff, #ff6fd8);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: rainbow-shift 4s linear infinite;
+    }
+    @keyframes rainbow-shift {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+
+    #menu-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+      margin: 0 0 10px;
+      letter-spacing: 0.5px;
+    }
+
     .menu-btn {
-      padding: 12px 16px;
-      border: none; border-radius: 12px;
-      font-weight: bold; font-size: 15px; cursor: pointer;
-      background: #2563eb; color: #fff;
-      flex: 1 1 auto;
-      min-width: 140px; max-width: 260px;
+      position: relative;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      color: #fff;
+      width: 100%; max-width: 300px;
       white-space: nowrap;
+      overflow: hidden;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      box-shadow: 0 4px 18px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.25);
+      text-shadow: 0 1px 4px rgba(0,0,0,.4);
+      transition: transform .1s ease, box-shadow .1s ease, filter .1s ease;
+      animation: btn-in .4s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    .menu-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 42%;
+      border-radius: 0 0 50% 50%;
+      background: linear-gradient(to bottom, rgba(255,255,255,.28), transparent);
+      pointer-events: none;
+    }
+
+    .menu-btn:active {
+      transform: scale(0.93);
+      box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.15);
+      filter: brightness(0.88);
+    }
+
+    [data-mode="numbers"]  { background: linear-gradient(135deg, #f97316, #ef4444); box-shadow: 0 4px 18px rgba(239,68,68,.4),  inset 0 1px 0 rgba(255,255,255,.25); }
+    [data-mode="letters"]  { background: linear-gradient(135deg, #3b82f6, #6366f1); box-shadow: 0 4px 18px rgba(99,102,241,.4), inset 0 1px 0 rgba(255,255,255,.25); }
+    [data-mode="colors"]   { background: linear-gradient(135deg, #ec4899, #a855f7); box-shadow: 0 4px 18px rgba(168,85,247,.4), inset 0 1px 0 rgba(255,255,255,.25); }
+    [data-mode="random"]   { background: linear-gradient(135deg, #10b981, #3b82f6); box-shadow: 0 4px 18px rgba(16,185,129,.4), inset 0 1px 0 rgba(255,255,255,.25); }
+    [data-mode="syllables"]{ background: linear-gradient(135deg, #f59e0b, #10b981); box-shadow: 0 4px 18px rgba(245,158,11,.4), inset 0 1px 0 rgba(255,255,255,.25); }
+    #set-baby-name         { background: linear-gradient(135deg, #64748b, #475569); box-shadow: 0 4px 14px rgba(0,0,0,.4),      inset 0 1px 0 rgba(255,255,255,.2);  font-size: 13px; max-width: 200px; padding: 10px 18px; }
+
+    @keyframes btn-in {
+      from { transform: scale(0.6) translateY(10px); opacity: 0; }
+      to   { transform: scale(1)   translateY(0);    opacity: 1; }
     }
 
     /* ── Game area ────────────────────────────────────────── */
@@ -64,57 +132,154 @@
       display: flex; align-items: center; justify-content: center;
       font-weight: 900; color: white;
       text-align: center;
-      box-shadow: 0 6px 18px rgba(0,0,0,.35);
-      transition: transform .1s ease;
       cursor: pointer;
+      /* Glossy sphere look: radial gradient highlight + deep shadow */
+      background-image: radial-gradient(
+        circle at 34% 32%,
+        rgba(255,255,255,0.55) 0%,
+        rgba(255,255,255,0.10) 38%,
+        rgba(0,0,0,0.12) 100%
+      );
+      box-shadow:
+        0 8px 24px rgba(0,0,0,.40),
+        inset 0 -4px 10px rgba(0,0,0,.25),
+        inset 0  3px  8px rgba(255,255,255,.30);
+      /* Text shadow for legibility on any colour */
+      text-shadow: 0 2px 6px rgba(0,0,0,.45);
+      /* Spawn: scale up from nothing with a spring overshoot */
+      animation: bubble-in .35s cubic-bezier(.34,1.56,.64,1) both;
+      transition: transform .08s ease, box-shadow .08s ease;
+      will-change: transform;
     }
-    .bubble:active { transform: scale(0.88); }
 
-    /* Touch pop */
+    /* Idle float — JS assigns a random --delay and --dx per bubble */
+    .bubble.floating {
+      animation:
+        bubble-in .35s cubic-bezier(.34,1.56,.64,1) both,
+        bob var(--bob-dur, 2.8s) ease-in-out var(--bob-delay, 0s) infinite;
+    }
+
+    @keyframes bubble-in {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes bob {
+      0%, 100% { transform: translateY(0)    rotate(0deg);  }
+      30%      { transform: translateY(-8px)  rotate(-2deg); }
+      70%      { transform: translateY(-5px)  rotate( 1.5deg); }
+    }
+
+    .bubble:active {
+      transform: scale(0.84);
+      box-shadow:
+        0 3px 10px rgba(0,0,0,.50),
+        inset 0 -2px 6px rgba(0,0,0,.30),
+        inset 0  2px 5px rgba(255,255,255,.20);
+    }
+
+    /* ── Touch pop ────────────────────────────────────────── */
+    /* Squeeze → burst → ring fade */
     .pop {
-      animation: pop .22s ease-out forwards;
+      animation: pop-touch .32s cubic-bezier(.22,.61,.36,1) forwards;
       pointer-events: none;
     }
-    @keyframes pop {
-      to { transform: scale(1.4); opacity: 0; }
+    @keyframes pop-touch {
+      0%   { transform: scale(1);    opacity: 1; filter: brightness(1); }
+      18%  { transform: scale(0.72); opacity: 1; filter: brightness(1.4); }
+      55%  { transform: scale(1.55); opacity: .7; filter: brightness(1.8) blur(1px); }
+      100% { transform: scale(1.9);  opacity: 0; filter: brightness(1)   blur(3px); }
     }
 
-    /* Keyboard pop — sparkle burst, slightly different feel */
+    /* Ring ripple that fires on touch pop */
+    .pop::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,.8);
+      animation: ripple .38s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes ripple {
+      from { transform: scale(1);   opacity: .9; }
+      to   { transform: scale(2.4); opacity: 0;  }
+    }
+
+    /* ── Keyboard pop ─────────────────────────────────────── */
+    /* White flash → implode with pulse ring */
     .pop-kb {
-      animation: pop-kb .28s ease-out forwards;
+      animation: pop-kb .34s ease-out forwards;
       pointer-events: none;
     }
     @keyframes pop-kb {
-      0%   { transform: scale(1);    opacity: 1; filter: brightness(1); }
-      40%  { transform: scale(1.45); opacity: 1; filter: brightness(2.2); }
-      100% { transform: scale(0.6);  opacity: 0; filter: brightness(1); }
+      0%   { transform: scale(1);    opacity: 1;   filter: brightness(1); }
+      20%  { transform: scale(1.18); opacity: 1;   filter: brightness(3) saturate(0); }
+      50%  { transform: scale(0.9);  opacity: 1;   filter: brightness(2); }
+      100% { transform: scale(0.2);  opacity: 0;   filter: brightness(1); }
+    }
+
+    .pop-kb::after {
+      content: '';
+      position: absolute; inset: -6px;
+      border-radius: 50%;
+      border: 5px solid rgba(255,255,255,.9);
+      animation: kb-ring .42s cubic-bezier(.2,.8,.4,1) forwards;
+      pointer-events: none;
+    }
+    @keyframes kb-ring {
+      0%   { transform: scale(0.8); opacity: 1; }
+      60%  { transform: scale(2.2); opacity: .6; }
+      100% { transform: scale(3.0); opacity: 0; }
     }
 
     /* ── Sub-mode overlay ────────────────────────────────── */
     #submode-overlay {
       display: none;
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.87);
+      background: rgba(8,8,24,0.92);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       z-index: 10;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 14px;
-      padding: 20px;
+      gap: 12px;
+      padding: 24px;
     }
     #submode-overlay.visible { display: flex; }
     #submode-overlay h2 {
-      color: #fff; font-size: 20px; margin: 0 0 6px;
-      text-align: center;
+      font-size: 20px; font-weight: 900;
+      margin: 0 0 8px; text-align: center;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(255,255,255,.3);
     }
     .submode-btn {
-      padding: 15px 28px; border: none; border-radius: 14px;
-      font-weight: bold; font-size: 17px; cursor: pointer;
-      background: #2563eb; color: #fff;
+      position: relative;
+      overflow: hidden;
+      padding: 15px 28px;
+      border: none; border-radius: 999px;
+      font-weight: 800; font-size: 16px; cursor: pointer;
+      color: #fff;
       width: 100%; max-width: 280px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      box-shadow: 0 4px 18px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25);
+      text-shadow: 0 1px 4px rgba(0,0,0,.4);
+      transition: transform .1s ease, filter .1s ease;
     }
-    .submode-btn:hover { background: #1d4ed8; }
-    #submode-cancel { background: #555; }
+    .submode-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%; height: 42%;
+      border-radius: 0 0 50% 50%;
+      background: linear-gradient(to bottom, rgba(255,255,255,.28), transparent);
+      pointer-events: none;
+    }
+    .submode-btn:active { transform: scale(0.93); filter: brightness(0.88); }
+    #submode-cancel {
+      background: linear-gradient(135deg, #4b5563, #374151);
+      box-shadow: 0 4px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.15);
+      font-size: 14px; padding: 11px 24px;
+    }
 
     /* ── PWA install ─────────────────────────────────────── */
     #pwa-install {
@@ -129,14 +294,18 @@
     /* ── End / idle message ──────────────────────────────── */
     .message {
       font-size: clamp(28px, 6vw, 50px);
-      color: #333;
+      color: rgba(255,255,255,0.18);
       text-align: center;
-      font-weight: bold;
+      font-weight: 900;
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       width: 90%;
-      line-height: 1.4;
+      line-height: 1.5;
+    }
+    .message.win {
+      color: #fff;
+      text-shadow: 0 0 40px rgba(255,220,80,.6), 0 2px 8px rgba(0,0,0,.5);
     }
 
     /* ── Keyboard hint ───────────────────────────────────── */
@@ -151,12 +320,14 @@
 </head>
 <body>
   <div id="menu">
-    <button class="menu-btn" data-mode="numbers">🔢 Numbers</button>
-    <button class="menu-btn" data-mode="letters">🔤 Alphabets</button>
-    <button class="menu-btn" data-mode="colors">🎨 Colors</button>
-    <button class="menu-btn" data-mode="random">🎲 Random</button>
-    <button class="menu-btn" data-mode="syllables">🗣 Syllables</button>
-    <button class="menu-btn" id="set-baby-name">👶 Set Baby Name</button>
+    <div id="menu-title">🫧 Bubble Pop!</div>
+    <div id="menu-subtitle">tap a bubble · pop it!</div>
+    <button class="menu-btn" data-mode="numbers"   style="animation-delay:.05s">🔢 Numbers</button>
+    <button class="menu-btn" data-mode="letters"   style="animation-delay:.12s">🔤 Alphabets</button>
+    <button class="menu-btn" data-mode="colors"    style="animation-delay:.19s">🎨 Colors</button>
+    <button class="menu-btn" data-mode="random"    style="animation-delay:.26s">🎲 Random</button>
+    <button class="menu-btn" data-mode="syllables" style="animation-delay:.33s">🗣 Syllables</button>
+    <button class="menu-btn" id="set-baby-name"    style="animation-delay:.40s">👶 Set Baby Name</button>
   </div>
 
   <div id="submode-overlay">
@@ -466,12 +637,21 @@
 
     function makeBubble(label, bg, fontSize, size) {
       const b = document.createElement('button');
-      b.className = 'bubble';
-      b.style.cssText = `background:${bg}; font-size:${fontSize}; width:${size}px; height:${size}px;`;
+      b.className = 'bubble floating';
+      const bobDur   = (2.4 + Math.random() * 1.2).toFixed(2) + 's';
+      const bobDelay = (Math.random() * -3).toFixed(2) + 's'; // negative = start mid-cycle
+      b.style.cssText = [
+        `background-color:${bg}`,
+        `font-size:${fontSize}`,
+        `width:${size}px`,
+        `height:${size}px`,
+        `--bob-dur:${bobDur}`,
+        `--bob-delay:${bobDelay}`,
+      ].join(';');
       b.textContent = label;
       b.addEventListener('pointerdown', e => {
         e.preventDefault();
-        popBubble(b, label, false); // false = touch pop
+        popBubble(b, label, false);
       });
       return b;
     }
@@ -485,11 +665,11 @@
       const idx = bubbles.findIndex(x => x.el === b);
       if (idx === -1) return;
 
-      // Different pop animation for keyboard vs touch
+      b.classList.remove('floating');
       b.classList.add(fromKeyboard ? 'pop-kb' : 'pop');
-      setTimeout(() => b.remove(), fromKeyboard ? 280 : 220);
+      setTimeout(() => b.remove(), fromKeyboard ? 420 : 380);
 
-      if (fromKeyboard) playKbPopSound();
+      playKbPopSound();
 
       score++;
       speak(label);
@@ -501,7 +681,7 @@
           const msg = `Great job ${babyName}!`;
           speak(msg);
           kbHint.textContent = '';
-          game.innerHTML = `<div class="message">${msg}</div>`;
+          game.innerHTML = `<div class="message win">${msg} 🎉</div>`;
         } else {
           setTimeout(spawnBubbles, 900);
         }
@@ -524,6 +704,11 @@
         e.preventDefault();
         playErrorSound();                        // wrong key
       }
+    });
+
+    // Miss-tap on the game background (pointer landed on #game, not a bubble)
+    game.addEventListener('pointerdown', e => {
+      if (bubbles.length && e.target === game) playErrorSound();
     });
 
     /* ═══════════════════════════════════════════════════════════
