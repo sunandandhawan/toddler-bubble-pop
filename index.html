@@ -262,6 +262,37 @@
       }
     }
 
+    function playErrorSound() {
+      try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+
+        // ── Layer 1: descending buzz (high → low sawtooth) ───
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(280, now);
+        osc1.frequency.exponentialRampToValueAtTime(110, now + 0.18);
+        gain1.gain.setValueAtTime(0.22, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc1.connect(gain1).connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.22);
+
+        // ── Layer 2: short dissonant low thud ────────────────
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(90, now);
+        osc2.frequency.exponentialRampToValueAtTime(55, now + 0.14);
+        gain2.gain.setValueAtTime(0.18, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc2.connect(gain2).connect(ctx.destination);
+        osc2.start(now);
+        osc2.stop(now + 0.18);
+      } catch(e) {}
+    }
+
     /* ═══════════════════════════════════════════════════════════
        LAYOUT HELPERS
     ═══════════════════════════════════════════════════════════ */
@@ -486,11 +517,16 @@
 
     document.addEventListener('keydown', e => {
       if (!bubbles.length) return;
+      // Ignore modifier-only keys, function keys, etc.
+      if (e.key.length > 1 && !e.key.match(/^[0-9]$/)) return;
       const pressed = e.key.toLowerCase();
       const match   = bubbles.find(b => b.keyHint === pressed);
       if (match) {
         e.preventDefault();
-        popBubble(match.el, match.label, true); // true = keyboard pop
+        popBubble(match.el, match.label, true); // correct — keyboard pop
+      } else {
+        e.preventDefault();
+        playErrorSound();                        // wrong key
       }
     });
 
