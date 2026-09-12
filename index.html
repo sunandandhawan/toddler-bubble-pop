@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <style>
     html, body {
-      overscroll-behavior-x: none; /* disable horizontal nav */
+      overscroll-behavior-x: none;
       height: 100%; margin: 0; padding: 0;
       background: #000; color: #fff;
       font-family: system-ui, sans-serif;
@@ -31,6 +31,7 @@
       box-shadow: 0 6px 16px rgba(0,0,0,.3);
       transition: transform .1s ease;
       width: 110px; height: 110px;
+      cursor: pointer;
     }
     .bubble:active { transform: scale(0.9); }
     .pop { animation: pop .2s ease-out forwards; }
@@ -44,6 +45,33 @@
       margin: 8px;
     }
     #menu { text-align: center; padding: 15px; }
+
+    /* Sub-mode picker overlay */
+    #submode-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 10;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    #submode-overlay.visible { display: flex; }
+    #submode-overlay h2 {
+      color: #fff; font-size: 22px; margin: 0 0 8px;
+    }
+    .submode-btn {
+      padding: 16px 32px; border: none; border-radius: 14px;
+      font-weight: bold; font-size: 18px; cursor: pointer;
+      background: #2563eb; color: #fff; min-width: 240px;
+    }
+    .submode-btn:hover { background: #1d4ed8; }
+    #submode-cancel {
+      margin-top: 8px;
+      background: #555;
+    }
+
     #pwa-install {
       position: fixed;
       bottom: 20px;
@@ -64,6 +92,17 @@
       font-weight: bold;
       margin-top: 100px;
     }
+    /* Keyboard hint bar */
+    #kb-hint {
+      position: fixed;
+      bottom: 6px;
+      width: 100%;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
+      pointer-events: none;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
@@ -72,34 +111,57 @@
     <button class="menu-btn" data-mode="letters">🔤 Alphabets</button>
     <button class="menu-btn" data-mode="colors">🎨 Colors</button>
     <button class="menu-btn" data-mode="random">🎲 Random (Numb / Alph / Colr)</button>
-    <button class="menu-btn" data-mode="words">🗣 Words</button>
+    <button class="menu-btn" data-mode="syllables">🗣 Syllables</button>
     <button class="menu-btn" id="set-baby-name">👶 Set Baby Name</button>
   </div>
+
+  <!-- Sub-mode selection overlay -->
+  <div id="submode-overlay">
+    <h2 id="submode-title">Choose range</h2>
+    <button class="submode-btn" id="submode-a"></button>
+    <button class="submode-btn" id="submode-b"></button>
+    <button class="submode-btn" id="submode-cancel">✕ Cancel</button>
+  </div>
+
   <main id="game">
     <div class="message">Stops after 50 pops<br/><br/>(🔊)</div>
   </main>
-  <button id="pwa-install">Install App</button>
-  <script>
-    const game = document.getElementById('game');
-    const menu = document.getElementById('menu');
-    const wordInput = document.getElementById('wordInput');
-    let customWord = "ma,ma";
 
-    let score = 0;
-    let bubbles = [];
+  <div id="kb-hint"></div>
+  <button id="pwa-install">Install App</button>
+
+  <script>
+    const game      = document.getElementById('game');
+    const menu      = document.getElementById('menu');
+    const kbHint    = document.getElementById('kb-hint');
+
+    // Sub-mode overlay elements
+    const submodeOverlay = document.getElementById('submode-overlay');
+    const submodeTitle   = document.getElementById('submode-title');
+    const submodeA       = document.getElementById('submode-a');
+    const submodeB       = document.getElementById('submode-b');
+    const submodeCancel  = document.getElementById('submode-cancel');
+
+    let score       = 0;
+    let bubbles     = [];            // [{el, label, keyHint}]
     let currentMode = "";
-    let babyName = localStorage.getItem('babyName') || 'baby';
+    let letterRange = "basic";       // "basic" (A-E) | "full" (A-Z random)
+    let numberRange = "basic";       // "basic" (1-5) | "full" (0-9 random)
+    let customWord  = "ma,ma";
+    let babyName    = localStorage.getItem('babyName') || 'baby';
 
     const COLORS = ["red","orange","yellow","green","blue","purple","pink"];
     const COLOR_CODES = {
-      red: "#ef4444",
+      red:    "#ef4444",
       orange: "#f97316",
       yellow: "#eab308",
-      green: "#22c55e",
-      blue: "#3b82f6",
+      green:  "#22c55e",
+      blue:   "#3b82f6",
       purple: "#8b5cf6",
-      pink: "#ec4899"
+      pink:   "#ec4899"
     };
+
+    // ── Utilities ────────────────────────────────────────────────────────────
 
     function speak(text) {
       if ('speechSynthesis' in window) {
@@ -107,6 +169,15 @@
         utter.pitch = 1; utter.rate = 0.9;
         window.speechSynthesis.speak(utter);
       }
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
     }
 
     function setBabyName() {
@@ -119,134 +190,250 @@
     }
 
     function updateBabyNameButton() {
-      const button = document.getElementById('set-baby-name');
-      button.textContent = `👶 ${babyName}`;
+      document.getElementById('set-baby-name').textContent = `👶 ${babyName}`;
     }
+
+    // ── Sub-mode picker ───────────────────────────────────────────────────────
+
+    function showSubmodePicker(mode, callback) {
+      submodeOverlay.classList.add('visible');
+
+      if (mode === 'numbers') {
+        submodeTitle.textContent = '🔢 Choose number range';
+        submodeA.textContent     = '1 – 5  (beginner)';
+        submodeB.textContent     = '0 – 9  (random 5)';
+      } else {
+        submodeTitle.textContent = '🔤 Choose letter range';
+        submodeA.textContent     = 'A – E  (beginner)';
+        submodeB.textContent     = 'A – Z  (random 5)';
+      }
+
+      const cleanup = () => {
+        submodeOverlay.classList.remove('visible');
+        submodeA.onclick = submodeB.onclick = submodeCancel.onclick = null;
+      };
+
+      submodeA.onclick = () => { cleanup(); callback('basic'); };
+      submodeB.onclick = () => { cleanup(); callback('full');  };
+      submodeCancel.onclick = () => { cleanup(); };
+    }
+
+    // ── Label generation ──────────────────────────────────────────────────────
 
     function getModeForRound() {
       if (currentMode !== "random") return currentMode;
-      const modes = ["numbers","letters","colors"];
-      return modes[Math.floor(Math.random() * modes.length)];
+      return ["numbers","letters","colors"][Math.floor(Math.random() * 3)];
     }
+
+    function getLabels(roundMode) {
+      const num = Math.floor(Math.random() * 5) + 1; // 1–5
+
+      if (roundMode === "numbers") {
+        if (numberRange === "basic") {
+          // Sequential 1–num
+          return Array.from({length: num}, (_, i) => String(i + 1));
+        } else {
+          // Random sample of size num from 0–9
+          const pool = ["0","1","2","3","4","5","6","7","8","9"];
+          return shuffle(pool).slice(0, num);
+        }
+      }
+
+      if (roundMode === "letters") {
+        if (letterRange === "basic") {
+          // Sequential A–(A+num-1)
+          return Array.from({length: num}, (_, i) => String.fromCharCode(65 + i));
+        } else {
+          // Random sample of size num from A–Z
+          const pool = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
+          return shuffle(pool).slice(0, num);
+        }
+      }
+
+      if (roundMode === "colors") {
+        return shuffle(COLORS).slice(0, num);
+      }
+
+      if (roundMode === "syllables") {
+        const parts = customWord.split(',').map(s => s.trim()).filter(Boolean);
+        return parts; // use all syllables as defined
+      }
+
+      return [];
+    }
+
+    // ── Key hint for keyboard matching ────────────────────────────────────────
+
+    /**
+     * Returns the key(s) that should trigger popping this bubble.
+     * For numbers: the digit character.
+     * For letters: the letter (lowercase comparison).
+     * For colors / syllables: first character of the label (lowercase).
+     */
+    function keyHintFor(label) {
+      return label[0].toLowerCase();
+    }
+
+    function updateKbHint() {
+      if (!bubbles.length) { kbHint.textContent = ''; return; }
+      const keys = [...new Set(bubbles.map(b => b.keyHint.toUpperCase()))].join('  ');
+      kbHint.textContent = `⌨ Press: ${keys}`;
+    }
+
+    // ── Spawn ─────────────────────────────────────────────────────────────────
 
     function spawnBubbles() {
       game.innerHTML = '';
       bubbles = [];
 
       const roundMode = getModeForRound();
-      let num = Math.floor(Math.random()*5) + 1; // 1–5 bubbles
-      let labels = [];
+      const labels    = getLabels(roundMode);
+      const num       = labels.length;
+      const size      = 110;
+      const gap       = 20;
+      const isColors  = (roundMode === "colors");
 
-      if (roundMode === "numbers") {
-        labels = Array.from({length: num}, (_, i) => (i+1).toString());
-      } else if (roundMode === "letters") {
-        labels = Array.from({length: num}, (_, i) => String.fromCharCode(65+i));
-      } else if (roundMode === "colors") {
-        labels = COLORS.slice(0, num);
-      } else if (roundMode === "words") {
-        const word = customWord;
-        labels = word.split(',');
-        num = labels.length;
-      }
-
-      const size = 110;
-      const gap = 20;
-
-      if (roundMode === "colors") {
-        // Place randomly
+      if (isColors) {
         const { width, height } = game.getBoundingClientRect();
         labels.forEach(label => {
-          const b = document.createElement('button');
-          b.className = 'bubble';
-          b.style.fontSize = "14px"; // smaller font for color names
-          b.style.background = COLOR_CODES[label];
-          b.textContent = label;
+          const b = makeBubble(label, COLOR_CODES[label], "14px");
           b.style.left = Math.random() * (width - size - 20) + "px";
           b.style.top  = Math.random() * (height - size - 20) + "px";
-          b.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            popBubble(b,label);
-          });
           game.appendChild(b);
-          bubbles.push({el:b,label});
+          bubbles.push({ el: b, label, keyHint: keyHintFor(label) });
         });
       } else {
-        // Grid placement for numbers/letters
-        const cols = Math.min(num, 3);
-        const startX = (game.clientWidth - (cols * size + (cols-1)*gap)) / 2;
-        const startY = (game.clientHeight - (Math.ceil(num/cols) * size + (Math.ceil(num/cols)-1)*gap)) / 2;
+        const cols   = Math.min(num, 3);
+        const rows   = Math.ceil(num / cols);
+        const startX = (game.clientWidth  - (cols * size + (cols - 1) * gap)) / 2;
+        const startY = (game.clientHeight - (rows * size + (rows - 1) * gap)) / 2;
 
         labels.forEach((label, i) => {
-          const row = Math.floor(i / cols);
-          const col = i % cols;
-          const b = document.createElement('button');
-          b.className = 'bubble';
-          b.style.fontSize = "55px"; // large font for toddlers
-          b.style.left = (startX + col*(size+gap)) + 'px';
-          b.style.top  = (startY + row*(size+gap)) + 'px';
-          b.style.background = COLOR_CODES[COLORS[(Math.random()*COLORS.length)|0]];
-          b.textContent = label;
-          b.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            popBubble(b,label);
-          });
+          const row  = Math.floor(i / cols);
+          const col  = i % cols;
+          const bg   = COLOR_CODES[COLORS[(Math.random() * COLORS.length) | 0]];
+          const b    = makeBubble(label, bg, "55px");
+          b.style.left = (startX + col * (size + gap)) + 'px';
+          b.style.top  = (startY + row * (size + gap)) + 'px';
           game.appendChild(b);
-          bubbles.push({el:b,label});
+          bubbles.push({ el: b, label, keyHint: keyHintFor(label) });
         });
       }
+
+      updateKbHint();
     }
 
-    function popBubble(b,label) {
+    function makeBubble(label, bg, fontSize) {
+      const b = document.createElement('button');
+      b.className = 'bubble';
+      b.style.background = bg;
+      b.style.fontSize   = fontSize;
+      b.textContent      = label;
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        popBubble(b, label);
+      });
+      return b;
+    }
+
+    // ── Pop ───────────────────────────────────────────────────────────────────
+
+    function popBubble(b, label) {
       reqFullScrn();
-      const bubbleObj = bubbles.find(x => x.el === b);
-      if (!bubbleObj) return;
+      const idx = bubbles.findIndex(x => x.el === b);
+      if (idx === -1) return;               // already popped
 
       b.classList.add('pop');
       setTimeout(() => b.remove(), 200);
       score++;
       speak(label);
-      bubbles = bubbles.filter(x => x.el !== b);
+      bubbles.splice(idx, 1);
+      updateKbHint();
+
       if (bubbles.length === 0) {
         if (score >= 50) {
           const message = `Great job ${babyName}!`;
           speak(message);
+          kbHint.textContent = '';
           game.innerHTML = `<div class="message">${message}</div>`;
-        } else{
+        } else {
           setTimeout(spawnBubbles, 1000);
         }
       }
     }
 
+    // ── Keyboard support ──────────────────────────────────────────────────────
+
+    document.addEventListener('keydown', e => {
+      if (!bubbles.length) return;
+      const pressed = e.key.toLowerCase();
+
+      // Find first bubble whose keyHint matches
+      const match = bubbles.find(b => b.keyHint === pressed);
+      if (match) {
+        e.preventDefault();
+        popBubble(match.el, match.label);
+      }
+    });
+
+    // ── Fullscreen ────────────────────────────────────────────────────────────
+
     function reqFullScrn() {
       if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(()=>{});
+        document.documentElement.requestFullscreen().catch(() => {});
       }
     }
 
-    // Menu button click
+    // ── Menu ──────────────────────────────────────────────────────────────────
+
     document.querySelectorAll('.menu-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (btn.id === 'set-baby-name') {
-          setBabyName();
+        if (btn.id === 'set-baby-name') { setBabyName(); return; }
+
+        const mode = btn.dataset.mode;
+
+        if (mode === 'syllables') {
+          const input = prompt('Enter comma-separated syllables', customWord);
+          if (input && input.trim()) customWord = input.trim();
+          startGame('syllables');
           return;
         }
-        if (btn.getAttribute('data-mode') === 'words') {
-          customWord = prompt('Enter comma separated syllables', customWord).trim();
+
+        if (mode === 'letters') {
+          showSubmodePicker('letters', range => {
+            letterRange = range;
+            startGame('letters');
+          });
+          return;
         }
-        reqFullScrn();
-        currentMode = btn.dataset.mode;
-        menu.style.display = "none"; // hide menu after selection
-        spawnBubbles();
+
+        if (mode === 'numbers') {
+          showSubmodePicker('numbers', range => {
+            numberRange = range;
+            startGame('numbers');
+          });
+          return;
+        }
+
+        // colors, random
+        startGame(mode);
       });
     });
 
-    // Initialize baby name button text
+    function startGame(mode) {
+      reqFullScrn();
+      score = 0;
+      currentMode = mode;
+      menu.style.display = "none";
+      spawnBubbles();
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+
     updateBabyNameButton();
 
     history.pushState(null, null, location.href);
-      window.onpopstate = function () {
-      history.go(1); // lock in place
-    };
+    window.onpopstate = () => history.go(1);
   </script>
   <script src="pwa.js"></script>
 </body>
