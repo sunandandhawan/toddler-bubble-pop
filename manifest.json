@@ -7,7 +7,7 @@
   "display_override": ["standalone"],
   "background_color": "#000000",
   "theme_color": "#000000",
-  "orientation": "portrait",
+  "orientation": "any",
   "description": "Fun toddler game with bubbles, numbers, alphabets, and colors to pop and learn.",
   "categories": ["games"],
   "prefer_related_applications": false,
